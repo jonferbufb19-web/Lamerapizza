@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador de Enlaces Limpios</title>
+  <style>
+    :root {
+      --bg: #121212;
+      --card: #1e1e1e;
+      --primary: #ff5722;
+      --primary-hover: #e64a19;
+      --text: #ffffff;
+      --muted: #aaaaaa;
+      --border: #333333;
+      --success: #25d366;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 20px; min-height: 100vh; }
+    .container { width: 100%; max-width: 550px; background: var(--card); padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--border); }
+    h1 { font-size: 1.5rem; margin-bottom: 5px; text-align: center; color: var(--primary); }
+    p.subtitle { text-align: center; color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
+    
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; background: #161616; padding: 6px; border-radius: 10px; }
+    .tab { flex: 1; padding: 10px; text-align: center; background: transparent; color: var(--muted); border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: 0.2s; }
+    .tab.active { background: var(--primary); color: #fff; }
+    
+    .panel { display: none; }
+    .panel.active { display: block; }
+    
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; margin-top: 12px; }
+    input, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: #141414; color: #fff; font-size: 0.95rem; outline: none; }
+    input:focus, textarea:focus { border-color: var(--primary); }
+    
+    button.action-btn { width: 100%; padding: 13px; margin-top: 18px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    button.action-btn:hover { background: var(--primary-hover); }
+    
+    .result-box { margin-top: 20px; padding: 15px; background: #141414; border: 1px solid var(--border); border-radius: 10px; display: none; }
+    .result-url { word-break: break-all; font-weight: bold; color: var(--success); margin-bottom: 12px; font-size: 1.05rem; }
+    .btn-group { display: flex; gap: 10px; }
+    .btn-secondary { flex: 1; padding: 10px; background: #2c2c2c; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+    .btn-secondary:hover { background: #3d3d3d; }
+
+    .qr-container { text-align: center; margin-top: 15px; }
+    .qr-container img { background: #fff; padding: 10px; border-radius: 10px; max-width: 200px; }
+
+    .history { margin-top: 25px; border-top: 1px solid var(--border); padding-top: 15px; }
+    .history h3 { font-size: 0.95rem; color: var(--muted); margin-bottom: 10px; display: flex; justify-content: space-between; }
+    .history-item { display: flex; justify-content: space-between; align-items: center; background: #161616; padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 0.85rem; }
+    .history-item a { color: var(--success); text-decoration: none; font-weight: 600; word-break: break-all; margin-right: 10px; }
+    .clear-btn { background: none; border: none; color: #ff4d4d; cursor: pointer; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🔗 Generador de Enlaces</h1>
+  <p class="subtitle">100% libre de anuncios, intermediarios y caducidad</p>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('short')">Acortar Link</button>
+    <button class="tab" onclick="switchTab('wa')">Link WhatsApp</button>
+    <button class="tab" onclick="switchTab('qr')">Código QR</button>
+  </div>
+
+  <!-- PANEL 1: ACORTADOR -->
+  <div id="panel-short" class="panel active">
+    <label>Pega tu enlace largo (de tu menú, Maps, Drive, etc.):</label>
+    <input type="url" id="long-url" placeholder="https://...">
+    <button class="action-btn" onclick="shortenUrl()">Generar Enlace Corto Directo</button>
+  </div>
+
+  <!-- PANEL 2: WHATSAPP -->
+  <div id="panel-wa" class="panel">
+    <label>Número de WhatsApp (con código de país, ej: 57 para Colombia o 52 para México):</label>
+    <input type="number" id="wa-phone" placeholder="Ej: 573001234567">
+    <label>Mensaje automático que enviará el cliente:</label>
+    <textarea id="wa-msg" rows="3" placeholder="¡Hola! Quiero hacer un pedido en La Mera Pizza 🍕"></textarea>
+    <button class="action-btn" onclick="generateWaLink()">Crear Enlace de WhatsApp</button>
+  </div>
+
+  <!-- PANEL 3: QR -->
+  <div id="panel-qr" class="panel">
+    <label>Enlace para convertir en QR permanente:</label>
+    <input type="url" id="qr-url" placeholder="https://...">
+    <button class="action-btn" onclick="generateQr()">Generar QR sin Publicidad</button>
+  </div>
+
+  <!-- CAJA DE RESULTADO -->
+  <div id="result-box" class="result-box">
+    <div id="result-url" class="result-url"></div>
+    <div class="btn-group">
+      <button class="btn-secondary" onclick="copyResult()">📋 Copiar Enlace</button>
+      <button class="btn-secondary" onclick="openResult()">🚀 Probar</button>
+    </div>
+    <div id="qr-preview" class="qr-container" style="display:none;">
+      <img id="qr-img" src="" alt="Código QR">
+    </div>
+  </div>
+
+  <!-- HISTORIAL GUARDADO -->
+  <div class="history">
+    <h3>
+      <span>Mis enlaces guardados</span>
+      <button class="clear-btn" onclick="clearHistory()">Borrar historial</button>
+    </h3>
+    <div id="history-list"></div>
+  </div>
+</div>
+
+<script>
+  let currentLink = "";
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('result-box').style.display = 'none';
+
+    if (tab === 'short') {
+      document.querySelectorAll('.tab')[0].classList.add('active');
+      document.getElementById('panel-short').classList.add('active');
+    } else if (tab === 'wa') {
+      document.querySelectorAll('.tab')[1].classList.add('active');
+      document.getElementById('panel-wa').classList.add('active');
+    } else {
+      document.querySelectorAll('.tab')[2].classList.add('active');
+      document.getElementById('panel-qr').classList.add('active');
+    }
+  }
+
+  // Callback para el acortador limpio is.gd
+  window.handleShortUrl = function(data) {
+    if (data.shorturl) {
+      showResult(data.shorturl, false);
+      saveToHistory("Corto", data.shorturl);
+    } else {
+      alert("Error al acortar: Verifica que el enlace empiece con http:// o https://");
+    }
+  };
+
+  function shortenUrl() {
+    const url = document.getElementById('long-url').value.trim();
+    if (!url.startsWith('http')) {
+      alert('Por favor ingresa un enlace válido que empiece con https://');
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = `https://is.gd/create.php?format=json&callback=handleShortUrl&url=${encodeURIComponent(url)}`;
+    document.body.appendChild(script);
+  }
+
+  function generateWaLink() {
+    const phone = document.getElementById('wa-phone').value.replace(/\D/g, '');
+    const msg = document.getElementById('wa-msg').value.trim();
+    if (!phone) {
+      alert('Ingresa tu número de WhatsApp con el código de país.');
+      return;
+    }
+    const link = `https://wa.me/${phone}${msg ? '?text=' + encodeURIComponent(msg) : ''}`;
+    showResult(link, false);
+    saveToHistory("WhatsApp", link);
+  }
+
+  function generateQr() {
+    const url = document.getElementById('qr-url').value.trim();
+    if (!url) {
+      alert('Escribe o pega el enlace para el código QR.');
+      return;
+    }
+    showResult(url, true);
+  }
+
+  function showResult(link, showQr) {
+    currentLink = link;
+    document.getElementById('result-url').innerText = link;
+    document.getElementById('result-box').style.display = 'block';
+    
+    const qrPreview = document.getElementById('qr-preview');
+    if (showQr) {
+      document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(link)}`;
+      qrPreview.style.display = 'block';
+    } else {
+      qrPreview.style.display = 'none';
+    }
+  }
+
+  function copyResult() {
+    navigator.clipboard.writeText(currentLink);
+    alert('¡Enlace copiado al portapapeles!');
+  }
+
+  function openResult() {
+    window.open(currentLink, '_blank');
+  }
+
+  function saveToHistory(type, link) {
+    const history = JSON.parse(localStorage.getItem('my_clean_links') || '[]');
+    history.unshift({ type, link });
+    localStorage.setItem('my_clean_links', JSON.stringify(history.slice(0, 10)));
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const history = JSON.parse(localStorage.getItem('my_clean_links') || '[]');
+    const container = document.getElementById('history-list');
+    if (history.length === 0) {
+      container.innerHTML = '<p style="color:#666; font-size:0.8rem;">Aún no has generado enlaces.</p>';
+      return;
+    }
+    container.innerHTML = history.map(item => `
+      <div class="history-item">
+        <a href="${item.link}" target="_blank">[${item.type}] ${item.link}</a>
+        <button class="btn-secondary" style="flex:0; padding:6px 10px;" onclick="navigator.clipboard.writeText('${item.link}')">Copiar</button>
+      </div>
+    `).join('');
+  }
+
+  function clearHistory() {
+    localStorage.removeItem('my_clean_links');
+    renderHistory();
+  }
+
+  renderHistory();
+</script>
+
+</body>
+</html>
